@@ -1,0 +1,9 @@
+{
+  "discord": { "target": "디코", "type": "app" },
+  "dsc": { "target": "디코", "type": "app" },
+  "kakaotalk": { "target": "카톡", "type": "app" },
+  "kakao": { "target": "카톡", "type": "app" },
+  "youtube": { "target": "유튜브", "type": "site" },
+  "yt": { "target": "유튜브", "type": "site" },
+  "naver": { "target": "네이버", "type": "site" }
+}

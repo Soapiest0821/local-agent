@@ -26,3 +26,4 @@ replay_pid*
 target/
 out/
 봇치.png
+commands.json

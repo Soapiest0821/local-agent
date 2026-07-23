@@ -5,11 +5,18 @@ import java.util.*;
 import java.util.stream.*;
 
 public class MacroManager {
+  public static class AliasEntry {
+    public String target;
+    public String type;
+  }
+
+  private static final String ALIASES_JSON_PATH = "src/main/resources/json/aliases.json";
   private static final String TOP_JSON_PATH = "src/main/resources/json/top.json";
   private static final String APPS_JSON_PATH = "src/main/resources/json/apps.json";
   private static final String EDITORS_JSON_PATH = "src/main/resources/json/editors.json";
   private static final String SITES_JSON_PATH = "src/main/resources/json/sites.json"; // 경로 추가
 
+  private Map<String, AliasEntry> aliases; // 필드 추가
   private Map<String, List<String>> commands; // 폴더 별칭
   private Map<String, Map<String, Integer>> freqData; // 빈도
   private Map<String, String> apps; // 앱 실행 경로
@@ -18,6 +25,7 @@ public class MacroManager {
   private final ObjectMapper mapper = new ObjectMapper();
 
   public MacroManager(String commandsJsonPath) {
+    aliases = loadMap(ALIASES_JSON_PATH, new HashMap<>());
     commands = loadMap(commandsJsonPath, new HashMap<>());
     apps = loadMap(APPS_JSON_PATH, new HashMap<>());
     editors = loadMap(EDITORS_JSON_PATH, new HashMap<>());
@@ -64,7 +72,10 @@ public class MacroManager {
 
   // 핵심: 입력값 분석해서 결과 리스트 만들기
   public List<SearchResult> resolve(String input) {
-
+    private String resolveAlias(String word) {
+        AliasEntry entry = aliases.get(word);
+        return (entry != null) ? entry.target : word; // 별칭이면 원본으로, 아니면 그대로
+    }
     String trimmed = input.trim();
     if (trimmed.isEmpty())
       return Collections.emptyList();
@@ -73,7 +84,7 @@ public class MacroManager {
     String[] parts = trimmed.split("\\s+", 2);
 
     if (parts.length == 1) {
-      String word = parts[0];
+      String word = resolveAlias(parts[0]);
 
       if (apps.containsKey(word)) {
         results.add(new SearchResult("🚀 " + word + " 실행하기", SearchResult.Type.APP, apps.get(word), null));
