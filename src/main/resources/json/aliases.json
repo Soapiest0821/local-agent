@@ -1,9 +1,17 @@
 {
+  "google": { "target": "구글", "type": "site" },
+  "검색": { "target": "구글", "type": "site" },
+  "naver": { "target": "네이버", "type": "site" },
+  "youtube": { "target": "유튜브", "type": "site" },
+  "yt": { "target": "유튜브", "type": "site" },
+  "github": { "target": "깃허브", "type": "site" },
+  "quora": { "target": "쿼라", "type": "site" },
+  "claude": { "target": "클로드", "type": "site" },
+  "todomate": { "target": "투두메이트", "type": "site" },
+  "todo": { "target": "투두메이트", "type": "site" },
+
   "discord": { "target": "디코", "type": "app" },
   "dsc": { "target": "디코", "type": "app" },
   "kakaotalk": { "target": "카톡", "type": "app" },
-  "kakao": { "target": "카톡", "type": "app" },
-  "youtube": { "target": "유튜브", "type": "site" },
-  "yt": { "target": "유튜브", "type": "site" },
-  "naver": { "target": "네이버", "type": "site" }
+  "kakao": { "target": "카톡", "type": "app" }
 }

@@ -1,3 +1,8 @@
+* {
+  -fx-font-family: 'Nanum Gothic', sans-serif;
+  src: url('fonts/NanumGothic-Regular.ttf');
+}
+
 .list-view {
     -fx-background-color: rgba(255, 181, 217, 0.3);
     -fx-background-radius: 14;

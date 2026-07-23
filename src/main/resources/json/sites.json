@@ -1,7 +1,10 @@
 {
-  "유튜브": "https://www.youtube.com/results?search_query=",
-  "youtube": "https://www.youtube.com/results?search_query=",
-  "yt": "https://www.youtube.com/results?search_query=",
-  "네이버": "https://search.naver.com/search.naver?query=",
-  "naver": "https://search.naver.com/search.naver?query="
+  "구글": { "home": "https://www.google.com", "search": "https://www.google.com/search?q=" },
+  "네이버": { "home": "https://www.naver.com", "search": "https://search.naver.com/search.naver?query=" },
+  "유튜브": { "home": "https://www.youtube.com", "search": "https://www.youtube.com/results?search_query=" },
+  "깃허브": { "home": "https://github.com", "search": "https://github.com/search?q=" },
+  "쿼라": { "home": "https://www.quora.com", "search": "https://www.quora.com/search?q=" },
+  "클로드": { "home": "https://claude.ai", "search": null },
+  "충대": { "home": "https://portal.cnu.ac.kr", "search": null },
+  "투두메이트": { "home": "https://www.todomate.net", "search": null }
 }

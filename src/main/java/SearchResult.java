@@ -1,6 +1,6 @@
 public class SearchResult {
   public enum Type {
-    FOLDER, APP, EDITOR_FOLDER, GOOGLE, SITE_SEARCH
+    FOLDER, APP, EDITOR_FOLDER, GOOGLE, SITE_SEARCH, SITE_HOME
   }
 
   private final String displayText;
