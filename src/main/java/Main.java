@@ -11,16 +11,14 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 import java.util.List;
-import java.util.ArrayList;
 
 public class Main extends Application {
 
   private MacroManager macro;
-  private ListView<String> resultList;
+  private ListView<SearchResult> resultList;
 
   @Override
   public void start(Stage stage) {
-    // FolderMapper.Run();
     macro = new MacroManager("src/main/resources/json/commands.json");
 
     // 입력창
@@ -32,23 +30,17 @@ public class Main extends Application {
 
     // 결과 리스트
     resultList = new ListView<>();
-    resultList.setPrefHeight(90); // 3개 정도 보이는 높이
+    resultList.setPrefHeight(200);
     resultList.setMaxWidth(350);
     resultList.setVisible(false);
     resultList.setManaged(false);
 
     resultList.setCellFactory(lv -> {
-      ListCell<String> cell = new ListCell<>() {
+      ListCell<SearchResult> cell = new ListCell<>() {
         @Override
-        protected void updateItem(String item, boolean empty) {
+        protected void updateItem(SearchResult item, boolean empty) {
           super.updateItem(item, empty);
-          setText(empty ? null : item);
-          setStyle(
-              "-fx-background-color: transparent;" +
-                  "-fx-background-radius: 10;" +
-                  "-fx-text-fill: white;" +
-                  "-fx-font-size: 14px;" +
-                  "-fx-padding: 8 12 8 12;");
+          setText(empty ? null : item.getDisplayText());
         }
       };
       cell.setOnMouseEntered(e -> {
@@ -59,27 +51,21 @@ public class Main extends Application {
       return cell;
     });
 
-    // 입력할 때마다 검색 결과 갱신
+    // 입력할 때마다 결과 갱신
     inputField.textProperty().addListener((obs, oldText, newText) -> {
-      String trimmed = newText.trim();
-      List<String> allResults = macro.getAllResultsSorted(trimmed);
-
-      if (trimmed.isEmpty()) {
+      List<SearchResult> results = macro.resolve(newText);
+      if (results.isEmpty()) {
         resultList.setVisible(false);
         resultList.setManaged(false);
-        return;
+      } else {
+        resultList.getItems().setAll(results);
+        resultList.getSelectionModel().select(0);
+        resultList.setVisible(true);
+        resultList.setManaged(true);
       }
-
-      List<String> displayList = new ArrayList<>(allResults);
-      displayList.add("🔍 " + trimmed + " 검색하기!"); // 맨 밑에 항상 추가
-
-      resultList.getItems().setAll(displayList);
-      resultList.getSelectionModel().select(0); // 기본 선택 = 1위 (결과 있으면 결과, 없으면 검색하기)
-      resultList.setVisible(true);
-      resultList.setManaged(true);
     });
 
-    // 위/아래/엔터 처리
+    // 키 입력 처리
     inputField.setOnKeyPressed(e -> {
       if (e.getCode() == KeyCode.ESCAPE) {
         stage.close();
@@ -99,20 +85,13 @@ public class Main extends Application {
         resultList.getSelectionModel().select(Math.max(currentIndex - 1, 0));
         e.consume();
       } else if (e.getCode() == KeyCode.ENTER) {
-        String selected = resultList.getSelectionModel().getSelectedItem();
-        String query = inputField.getText().trim();
-
+        SearchResult selected = resultList.getSelectionModel().getSelectedItem();
         if (selected != null) {
-          if (selected.startsWith("🔍")) {
-            // "검색하기!" 항목 선택된 경우
-            macro.searchGoogle(query);
-          } else {
-            // 실제 폴더 경로 선택된 경우
-            macro.incrementFrequency(query, selected);
-            macro.openFolder(selected);
+          if (selected.getType() == SearchResult.Type.FOLDER) {
+            macro.incrementFrequency(inputField.getText().trim(), selected.getPrimaryValue());
           }
+          macro.execute(selected);
         }
-
         inputField.clear();
         resultList.setVisible(false);
         resultList.setManaged(false);
@@ -120,7 +99,7 @@ public class Main extends Application {
       }
     });
 
-    // 레이아웃 배치 (왼쪽 위쪽에 위치)
+    // 레이아웃 배치
     VBox topBox = new VBox(10, inputField, resultList);
     topBox.setAlignment(Pos.CENTER);
     topBox.setPadding(new Insets(100, 0, 0, 0));
@@ -139,9 +118,9 @@ public class Main extends Application {
     scene.getStylesheets().add(getClass().getResource("/style/style.css").toExternalForm());
     scene.setFill(Color.TRANSPARENT);
 
-    stage.initStyle(StageStyle.TRANSPARENT); // 프레임 제거 + 투명
+    stage.initStyle(StageStyle.TRANSPARENT);
     stage.setScene(scene);
-    stage.setX(800); // 왼쪽 위 위치
+    stage.setX(800);
     stage.setY(120);
     stage.show();
   }

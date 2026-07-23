@@ -6,19 +6,35 @@ import java.util.stream.*;
 
 public class MacroManager {
   private static final String TOP_JSON_PATH = "src/main/resources/json/top.json";
+  private static final String APPS_JSON_PATH = "src/main/resources/json/apps.json";
+  private static final String EDITORS_JSON_PATH = "src/main/resources/json/editors.json";
+  private static final String SITES_JSON_PATH = "src/main/resources/json/sites.json"; // 경로 추가
 
-  private Map<String, List<String>> commands; // commands.json (원본 결과 목록)
-  private Map<String, Map<String, Integer>> freqData; // top.json (빈도)
+  private Map<String, List<String>> commands; // 폴더 별칭
+  private Map<String, Map<String, Integer>> freqData; // 빈도
+  private Map<String, String> apps; // 앱 실행 경로
+  private Map<String, String> editors; // 에디터 커맨드
+  private Map<String, String> sites;
   private final ObjectMapper mapper = new ObjectMapper();
 
-  public MacroManager(String jsonPath) {
+  public MacroManager(String commandsJsonPath) {
+    commands = loadMap(commandsJsonPath, new HashMap<>());
+    apps = loadMap(APPS_JSON_PATH, new HashMap<>());
+    editors = loadMap(EDITORS_JSON_PATH, new HashMap<>());
+    sites = loadMap(SITES_JSON_PATH, new HashMap<>()); // 추가
+    loadFrequency();
+  }
+
+  private <T> Map<String, T> loadMap(String path, Map<String, T> fallback) {
     try {
-      commands = mapper.readValue(new File(jsonPath), Map.class);
+      File file = new File(path);
+      if (!file.exists())
+        return fallback;
+      return mapper.readValue(file, Map.class);
     } catch (IOException e) {
       e.printStackTrace();
-      commands = new HashMap<>();
+      return fallback;
     }
-    loadFrequency();
   }
 
   private void loadFrequency() {
@@ -46,25 +62,71 @@ public class MacroManager {
     }
   }
 
-  // 제한 없이 전체 반환: 빈도순 정렬 + 빈도기록 없는 항목은 뒤에 이어붙임
-  public List<String> getAllResultsSorted(String key) {
-    key = key.trim();
+  // 핵심: 입력값 분석해서 결과 리스트 만들기
+  public List<SearchResult> resolve(String input) {
 
-    // 1. 빈도 데이터 있는 것들 (내림차순 정렬)
+    String trimmed = input.trim();
+    if (trimmed.isEmpty())
+      return Collections.emptyList();
+
+    List<SearchResult> results = new ArrayList<>();
+    String[] parts = trimmed.split("\\s+", 2);
+
+    if (parts.length == 1) {
+      String word = parts[0];
+
+      if (apps.containsKey(word)) {
+        results.add(new SearchResult("🚀 " + word + " 실행하기", SearchResult.Type.APP, apps.get(word), null));
+      }
+
+      if (commands.containsKey(word)) {
+        for (String path : getAllResultsSorted(word)) {
+          results.add(new SearchResult("📁 " + path, SearchResult.Type.FOLDER, path, null));
+        }
+      }
+    } else {
+      String firstKey = parts[0];
+      String secondArg = parts[1];
+
+      // zed dev 같은 에디터 조합
+      if (editors.containsKey(firstKey) && commands.containsKey(secondArg)) {
+        for (String path : getAllResultsSorted(secondArg)) {
+          results.add(new SearchResult(
+              "🛠 " + firstKey + "(으)로 " + secondArg + " 열기 [" + path + "]",
+              SearchResult.Type.EDITOR_FOLDER,
+              editors.get(firstKey),
+              path));
+        }
+      }
+
+      // yt 고양이, naver 날씨 같은 사이트 검색 조합
+      if (sites.containsKey(firstKey)) {
+        results.add(new SearchResult(
+            "🔎 " + firstKey + "에서 \"" + secondArg + "\" 검색",
+            SearchResult.Type.SITE_SEARCH,
+            sites.get(firstKey) + java.net.URLEncoder.encode(secondArg, java.nio.charset.StandardCharsets.UTF_8),
+            null));
+      }
+    }
+
+    results.add(new SearchResult("🔍 \"" + trimmed + "\" 검색하기!", SearchResult.Type.GOOGLE, trimmed, null));
+    return results;
+  }
+
+  // 빈도순 정렬 + 나머지 이어붙이기 (기존 로직 그대로)
+  private List<String> getAllResultsSorted(String key) {
     Map<String, Integer> freqMap = freqData.getOrDefault(key, new HashMap<>());
     List<String> sortedByFreq = freqMap.entrySet().stream()
         .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
         .map(Map.Entry::getKey)
         .collect(Collectors.toList());
 
-    // 2. commands.json 원본 목록 중, 빈도 데이터에 없는 것들 (중복 제거)
     List<String> rawList = commands.getOrDefault(key, Collections.emptyList());
     List<String> remaining = rawList.stream()
         .distinct()
         .filter(path -> !freqMap.containsKey(path))
         .collect(Collectors.toList());
 
-    // 3. 합쳐서 반환 (빈도순 먼저, 나머지는 원본 순서대로 뒤에)
     List<String> result = new ArrayList<>(sortedByFreq);
     result.addAll(remaining);
     return result;
@@ -76,7 +138,19 @@ public class MacroManager {
     saveFrequency();
   }
 
-  public void openFolder(String path) {
+  // 결과 실행 (타입별 분기)
+  public void execute(SearchResult result) {
+    switch (result.getType()) {
+      case FOLDER -> openFolder(result.getPrimaryValue());
+      case APP -> runCommand(result.getPrimaryValue());
+      case EDITOR_FOLDER -> runEditorWithFolder(result.getPrimaryValue(), result.getSecondaryValue());
+      case GOOGLE -> searchGoogle(result.getPrimaryValue());
+      case SITE_SEARCH -> runCommand(result.getPrimaryValue()); // 이미 완성된 URL이라 바로 열기
+
+    }
+  }
+
+  private void openFolder(String path) {
     try {
       Runtime.getRuntime().exec(new String[] { "explorer.exe", path });
     } catch (IOException e) {
@@ -84,11 +158,26 @@ public class MacroManager {
     }
   }
 
-  public void searchGoogle(String query) {
+  private void runCommand(String command) {
+    try {
+      Runtime.getRuntime().exec(new String[] { "cmd", "/c", "start", "", command });
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void runEditorWithFolder(String editorCmd, String folderPath) {
+    try {
+      Runtime.getRuntime().exec(new String[] { editorCmd, folderPath });
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void searchGoogle(String query) {
     try {
       String url = "https://www.google.com/search?q=" +
           java.net.URLEncoder.encode(query, "UTF-8");
-      // "" 는 start의 창 제목 자리 -> 비워둬야 url이 제대로 인자로 들어감
       Runtime.getRuntime().exec(new String[] { "cmd", "/c", "start", "", url });
     } catch (IOException e) {
       e.printStackTrace();
