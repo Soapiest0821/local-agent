@@ -1,0 +1,14 @@
+{
+  "test" : {
+    "C:\\4rp2\\dev\\test" : 1
+  },
+  "dev" : {
+    "C:\\4rp2\\dev" : 4
+  },
+  "assistant" : {
+    "C:\\4rp2\\dev\\developing\\assistant" : 3
+  },
+  "src" : {
+    "C:\\4rp2\\dev\\developing\\assistant\\src" : 1
+  }
+}
